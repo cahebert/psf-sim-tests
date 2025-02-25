@@ -3,7 +3,7 @@ import numpy as np
 import fitsio
 import pandas as pd
 plt.style.use('./paper.mplstyle')  # change this to a paper specific one
-plt.rcParams['text.usetex'] = False
+# plt.rcParams['text.usetex'] = False
 
 def load_catalog(catpath):
     catalog = fitsio.read(catpath)
@@ -21,7 +21,8 @@ def load_catalog(catpath):
 
     return cat
 
-cat = load_catalog('~/workarea/piff-catalogs/cat-i-full-radec-03-piff-02.fits')
+cat = load_catalog('~/Documents/shear/testing-piff/data/cat-i-full-radec-03-piff-02.fits')
+
 print(np.mean(cat['dtt']))
 
 cat_res = cat[cat['reserved']]
@@ -101,6 +102,6 @@ a[2,1].set_xlabel(r'$\delta g^{(2)}$')
 a[3,0].set_xlabel(r'$e^{(4)}$')
 a[3,1].set_xlabel(r'$\delta e^{(4)}$')
 
-plt.subplots_adjust(top=0.975, bottom=0.085, right=0.925)
+plt.subplots_adjust(top=0.975, bottom=0.085, right=0.95, left=0.1)
 plt.savefig('../figures/cat_hist.jpg', dpi=300)
 # plt.show()
