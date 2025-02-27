@@ -1,9 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-plt.style.use('./figure_scripts/paper.mplstyle')  # change this to a paper specific one
+plt.style.use('./paper.mplstyle')  # change this to a paper specific one
 
-data = np.loadtxt('./data/tq_tratio_4thmom_012725.csv')  # load the TQ sims
+data = np.loadtxt('../data/tq_tratio_4thmom_012725.csv')  # load the TQ sims
 # print(data.shape)
 
 f, a = plt.subplots(2, 1, figsize=(3.35, 3), sharex=True, gridspec_kw={'hspace':0})
@@ -19,8 +19,8 @@ for ax, coeff_tuple in zip(a, [(data[1][::-1], data[2][::-1]), (data[3][::-1], d
     c = coeff_tuple[0][el+2] - m * (x[el+2] - x[0])
     ax.plot(xpts, xpts * m + c, color='lightgrey', lw=1.5)
 
-    ax.plot(x, coeff_tuple[0], ls='-', lw=1.5, label='real')
-    ax.plot(x, coeff_tuple[1], ls=':', lw=1.5, label='complex')
+    ax.plot(x, coeff_tuple[0], color='#0038A8', ls='-', lw=1.5, label='real')
+    ax.plot(x, coeff_tuple[1], color='#D60270', ls=':', lw=1.5, label='complex')
 
 a[0].legend(loc='lower left')
 
@@ -36,5 +36,5 @@ a[1].set_ylim(bottom=-0.1)
 
 plt.subplots_adjust(right=0.95, top=0.95, bottom=0.15)
 
-plt.savefig('./figures/tq_tratio_4thmom.jpg', dpi=300)
+plt.savefig('../figures/tratio-4thmom-tq-2.jpg', dpi=300)
 plt.show()

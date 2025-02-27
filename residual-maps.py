@@ -1,8 +1,9 @@
 import matplotlib.pyplot as plt
-import numpy as np
+# import numpy as np
 import fitsio
 import pandas as pd
 import skyproj
+import colorcet as cc
 plt.style.use('./paper.mplstyle')  # change this to a paper specific one
 
 def load_catalog(catpath, residual):
@@ -84,7 +85,7 @@ if __name__ == '__main__':
             sp = skyproj.McBrydeSkyproj(ax=ax, n_grid_lat=3)
             sp.draw_hpxbin(
                 cat['ra'], cat['dec'], C=cat[param],
-                zoom=True, xsize=600, cmap='RdBu_r',
+                zoom=True, xsize=600, cmap=cc.cm['CET_D1A'],
                 vmin=-vmax, vmax=vmax,
                 )
 
