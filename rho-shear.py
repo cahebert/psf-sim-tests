@@ -1,13 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-import pickle
+import json
+from colors import color_scheme as colors
+plt.style.use('./paper.mplstyle')
 
-plt.style.use('./paper.mplstyle')  # change this to a paper specific one
-# plt.rcParams['text.usetex'] = False
-
-colors = ['#D60270','#9B4F96','#0038A8']
-markers = ['o','s','^']
+markers = ['o','D','s']
 
 rho_labels = {'g2g2'   : r'$\langle e_2 e_2 \rangle$',
               'g2e4'   : r'$\langle e_2 e_4 \rangle$',
@@ -48,15 +45,25 @@ rho_labels = {'g2g2'   : r'$\langle e_2 e_2 \rangle$',
                }
 
 def plot_rho(ax, rho, label, marker, params):
-    ax.plot(rho.meanr, rho.xip, '-', **params)
-    ax.plot(rho.meanr, -rho.xip, ':', **params)
-    ax.errorbar(rho.meanr[rho.xip>0], rho.xip[rho.xip>0], yerr=np.sqrt(rho.varxip[rho.xip>0]), fmt=marker, label=label, **params)
-    ax.errorbar(rho.meanr[rho.xip<0], -rho.xip[rho.xip<0], yerr=np.sqrt(rho.varxip[rho.xip<0]), fmt=marker, mfc='none', mew=0.75, **params)
+    ax.plot(rho['meanr'], rho['xip'], '-', **params)
+    ax.plot(rho['meanr'], -rho['xip'], ':', **params)
+    ax.errorbar(
+        rho['meanr'][rho['xip']>0],
+        rho['xip'][rho['xip']>0],
+        yerr=np.sqrt(rho['xip_var'][rho['xip']>0]),
+        fmt=marker, label=label, **params
+    )
+    ax.errorbar(
+        rho['meanr'][rho['xip']<0],
+        -rho['xip'][rho['xip']<0],
+        yerr=np.sqrt(rho['xip_var'][rho['xip']<0]),
+        fmt=marker, mfc='none', mew=0.75, **params
+    )
     return ax
 
 def mean_rho(rho, lb=5, ub=100):
-    points = (rho.meanr>lb)&(rho.meanr<ub)
-    result = np.mean(rho.xip[points])
+    points = (rho['meanr']>lb)&(rho['meanr']<ub)
+    result = np.mean(rho['xip'][points])
     return result
 
 def plot_rho_examples(rhohomy10, rhohomy1, a):
@@ -128,21 +135,111 @@ def plot_rho_summary(rhohomy10, rhohomy1, a):
 
     a.set_ylim(bottom=1e-13, top=2e-5)
     a.set_xlim(-0.5, 35.5)
-    plt.savefig('../figures/rho-summary-hom-i-full-radec-03-piff-02-jk.jpg', dpi=300)
+    plt.savefig('../figures/' + title + '.jpg', dpi=300)
+    plt.show()
+
+
+def load_rho_samples(filename, n):
+    with open(filename, 'rb') as f:
+        rhos = json.load(f)
+
+    rho_summary = {}
+    error_norm = 1506/n  # divide by the number of independent samples
+
+    for k, rho in rhos.items():
+        if n==1506:
+            rho_summary[k] = {
+                'xip_var' : np.array(rho['varxip']).flatten(),
+                'xim_var' : np.array(rho['varxim']).flatten(),
+                'xip'     : np.array(rho['xip']).flatten(),
+                'xim'     : np.array(rho['xim']).flatten(),
+                'meanr'   : np.array(rho['meanr']).flatten()
+            }
+        else:
+            rho_summary[k] = {
+                'xip_var' : np.var(rho['xip'], axis=0).flatten() / error_norm,
+                'xim_var' : np.var(rho['xim'], axis=0).flatten() / error_norm,
+                'xip'     : np.mean(np.array(rho['xip']), axis=0).flatten(),
+                'xim'     : np.mean(np.array(rho['xim']), axis=0).flatten(),
+                'meanr'   : np.array(rho['meanr']).flatten()
+            }
+
+    return rho_summary
 
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--datapath', type=str, required=True)
+    parser.add_argument('--datapath', type=str, default='../data/')
     args = parser.parse_args()
 
-    with open(args.datapath+'/rho-i-full-radec-03-piff-02-patch25-hom1506.pkl', 'rb') as f:
-        rhohomy10 = pickle.load(f)
-    with open(args.datapath+'/rho-i-full-radec-03-piff-02-patch25-hom150.pkl', 'rb') as f:
-        rhohomy1 = pickle.load(f)
+    # # examples
+    rhohomy10 = load_rho_samples(
+        args.datapath+'/rho-i-full-radec-03-piff-02-cov1506.json',
+        n=1506
+    )
+    rhohomy1 = load_rho_samples(
+        args.datapath+'/rho-i-full-radec-03-piff-02-50x150.json',
+        n=150
+    )
 
-    f, a = plt.subplots(2,1, figsize=(3.35,4.25), sharex=True, sharey=True)
-    plot_rho_examples(rhohomy10, rhohomy1, a)
+    f, a = plt.subplots(3,1, figsize=(3.35,4.5), sharex=True, sharey=True)
+    plot_rho_examples(
+        rhohomy10,
+        rhohomy1,
+        a,
+        color_list=[colors.g, colors.p, colors.y],
+    )
 
-    f, a= plt.subplots(1,1, figsize=(7.5, 3))
-    plot_rho_summary(rhohomy10, rhohomy1, a)
+    # summary
+
+    # y10 vs y1
+    # rhohomy10 = load_rho_samples(
+    #     args.datapath+'/rho-i-full-radec-03-piff-02-summary-cov1506.json',
+    #     n=1506
+    # )
+
+    # rhohomy1 = load_rho_samples(
+    #     args.datapath+'/rho-i-full-radec-03-piff-02-summary-50x150.json',
+    #     n=150
+    # )
+
+    # significant = []
+    # for k, v in rhohomy1.items():
+    #     pm_sig_y1 = v['xip'] - v['var_xip'], v['xip'] + v['xip_var']
+    #     pm_sig_y10 = rhohomy10[k]['xip'] - rhohomy10[k]['xip_var'], rhohomy10[k]['xip'] + rhohomy10[k]['xip_var']
+
+    #     if pm_sig_y1[0] > pm_sig_y10[1] or pm_sig_y1[1] < pm_sig_y10[0]:
+    #         significant.append(k)
+    # print("significant terms: ", significant)
+
+    # y1toy10, y1toy10_sigma = fit_amplitude_scaling(rhohomy10, rhohomy1)
+    # print("y1 to y10 scaling: ", y1toy10, "+/-", y1toy10_sigma)
+
+    # f, a = plt.subplots(1,1, figsize=(7.5, 3))
+    # plot_rho_summary(
+    #     rhohomy10,
+    #     rhohomy1,
+    #     a,
+    #     labels=['Y10 $i$', 'Y1 $i$'],
+    #     color_list=[colors.g, colors.p, colors.y],
+    #     title='rho-summary-i-full-radec-03-piff-02',
+    #     coefficients=False,
+    #     rhohompred=None,
+    #     # significant=significant,
+    # )
+
+    # # big vs small psfs
+    # with open(args.datapath+'/rho-i-full-radec-03-piff-02-fwhmcutleq0.8-summary-cov567.json', 'rb') as f:
+    #     rhohomsmall = json.load(f)
+    # with open(args.datapath+'/rho-i-full-radec-03-piff-02-fwhmcutgg0.8-summary-cov567.json', 'rb') as f:
+    #     rhohombig = json.load(f)
+
+    # f, a = plt.subplots(1,1, figsize=(7.5, 3))
+    # plot_rho_summary(
+    #     rhohombig,
+    #     rhohomsmall,
+    #     a,
+    #     labels=['fwhm$>0.8$', 'fwhm$\leq0.8$'],
+    #     color_list=[colors.g, colors.p],
+    #     title='rho-summary-hom-i-full-radec-03-piff-02-jk-fwhmcut'
+    # )
