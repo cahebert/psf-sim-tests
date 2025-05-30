@@ -100,50 +100,139 @@ def plot_rho_examples(rhohomy10, rhohomy1, a, color_list):
     a[-1].set_xlabel(r'$\theta$ (arcmin)')
     a[1].set_ylim(bottom=5e-11)
     plt.subplots_adjust(hspace=0)
-    plt.savefig('../figures/rho-examples-hom-i-full-radec-03-piff-02-jk.jpg', dpi=300)
+    plt.savefig('../figures/rho-examples-hom-i-full-radec-03-piff-02.jpg', dpi=300)
     # plt.show()
 
-def plot_rho_summary(rhohomy10, rhohomy1, a):
+def plot_rho_summary(
+    rhohomy10,
+    rhohomy1,
+    a,
+    labels,
+    color_list,
+    title,
+    coefficients=False,
+    significant=None
+    ):
     bad = ['nvisits']
     alpha2_terms = ['g2g2', 'g2e4', 'e4e4']
-    alpha_terms = ['g2dg2', 'g2de4', 'g2w22', 'g2w24', 'g2w42', 'g2w44', 'e4dg2', 'e4de4', 'e4w22', 'e4w24', 'e4w42', 'e4w44']
-    noalpha_terms = [k for k in rhohomy10.keys() if k not in alpha_terms+alpha2_terms+bad]
+    alpha_terms = ['g2dg2', 'g2de4', 'e4dg2', 'e4de4', 'g2w22', 'g2w24', 'g2w42', 'g2w44', 'e4w22', 'e4w24', 'e4w42', 'e4w44']
+
+    if coefficients:
+        with open('../data/coeffs-i-full-radec-03-piff-02.json', 'r') as f:
+            coefficients = json.load(f)
+        coeffy10 = coefficients['y10']
+        coeffy1 = coefficients['y1']
+        # if we apply coefficients on everything, all terms are included in first pass
+        noalpha_terms = [k for k in rhohomy10.keys() if k not in bad]
+    else:
+        coeffy10 = {k:1 for k in rhohomy10.keys()}
+        coeffy1 = {k:1 for k in rhohomy1.keys()}
+        noalpha_terms = [k for k in rhohomy10.keys() if k not in alpha_terms+alpha2_terms+bad]
+
     sorted = {}
     xlabels = []
-    for rhohom, transparancy in zip([rhohomy10, rhohomy1], [1, 0.5]):
+
+    for rhohom, transparancy, c, coeffs, fmt in zip(
+        [rhohomy10, rhohomy1],
+        [1, 0.75],
+        color_list,
+        [coeffy10, coeffy1],
+        ['o', 'D']
+    ):
         n_start = 0
-        params = {'color': 'k', 'alpha':transparancy}
-        for alpha_factor, terms in zip([0,1,2], [noalpha_terms, alpha_terms, alpha2_terms]):
-            means = np.array([mean_rho(rhohom[rho]) for rho in terms])
+        params = {'color': c, 'alpha':transparancy, 'capsize': 1.5, 'capthick': 0.5, 'zorder':2}
+
+        for alpha_factor, terms in zip(
+            [0,1,2] if not coefficients else [0],
+            [noalpha_terms, alpha_terms, alpha2_terms]
+        ):
+            means = np.array(
+                [rhohom[rho]['xip'] * coeffs[rho] for rho in terms]
+            ).flatten()
+            sigma = np.array(
+                [np.sqrt(rhohom[rho]['xip_var']) * abs(coeffs[rho]) for rho in terms]
+            ).flatten()
+
             if transparancy==1:
+                # means we're doing y10; sort by these values
                 sorted[alpha_factor] = np.argsort(abs(means))[::-1]
                 xlabels += [rho_labels[k] for k in np.array(terms)[sorted[alpha_factor]]]
             pltpts = np.arange(len(terms))+n_start
-            a.plot(pltpts, means[sorted[alpha_factor]], 'o', **params)
-            a.plot(pltpts, -means[sorted[alpha_factor]], 'o', mfc='none', mew=0.75, **params)
+
+            pos = means[sorted[alpha_factor]] > 0
+            a.errorbar(
+                pltpts[pos],
+                means[sorted[alpha_factor]][pos],
+                yerr=sigma[sorted[alpha_factor]][pos],
+                fmt=fmt,
+                **params,
+            )
+            a.errorbar(
+                pltpts[~pos],
+                -means[sorted[alpha_factor]][~pos],
+                yerr=sigma[sorted[alpha_factor]][~pos],
+                fmt=fmt,
+                mfc='none',
+                mew=0.75,
+                **params
+            )
 
             if alpha_factor>0:
-                a.plot(pltpts, means[sorted[alpha_factor]]*(0.025**alpha_factor), '^', **params)
-                a.plot(pltpts, -means[sorted[alpha_factor]]*(0.025**alpha_factor), '^', mfc='none', mew=0.75, **params)
+                a.errorbar(
+                    pltpts[pos],
+                    means[sorted[alpha_factor]][pos]*(0.025**alpha_factor),
+                    yerr=sigma[sorted[alpha_factor]][pos]*(0.025**alpha_factor),
+                    fmt='s',
+                    **params,
+                )
+                a.errorbar(
+                    pltpts[~pos],
+                    -means[sorted[alpha_factor]][~pos]*(0.025**alpha_factor),
+                    yerr=sigma[sorted[alpha_factor]][~pos]*(0.025**alpha_factor),
+                    fmt= 's',
+                    mfc='none',
+                    mew=0.75,
+                    **params,
+                )
 
-                a.fill_betweenx([0,1], n_start-0.5, len(rhohom.keys())-1.5, alpha=0.05, color='k')
+                a.fill_betweenx([0,1], n_start-0.5, len(rhohom.keys())-0.5, alpha=0.05, color='k')
 
             n_start += len(terms)
 
-    a.set_xticks(np.arange(len(rhohom.keys())-1), xlabels, rotation=66)
+    a.set_xticks(
+        np.arange(len(rhohomy1.keys())),
+        labels=xlabels,
+        rotation=65,
+        ha="right",
+        rotation_mode='anchor'
+    )
+
+    if significant is not None:
+        xpos = []
+        for s in significant:
+            xpos += [i for i,x in enumerate(xlabels) if rho_labels[s]==x]
+
+        [plt.setp(a.get_xticklabels()[i], color=colors.y) for i in xpos]
 
     a.set_yscale('log', nonpositive='clip')
 
     from matplotlib.lines import Line2D
-    handles = [Line2D([0], [0], ls='', marker='o', color='k', label='Y10', markerfacecolor='k'),
-            Line2D([0], [0], ls='', marker='o', alpha=0.5, color='k', label='Y1', markerfacecolor='k')]
-    a.legend(handles=handles, loc='upper left', frameon=True, edgecolor='lightgrey')
+    handles = [
+        Line2D([0], [0], ls='', marker='D', alpha=0.9, color=color_list[1], label=labels[1], markerfacecolor=color_list[1]),
+        Line2D([0], [0], ls='', marker='o', color=color_list[0], label=labels[0], markerfacecolor=color_list[0]),
+        ]
 
-    a.set_ylabel(r"$\langle \rho(\theta)\rangle_{5'-100'}$")
+    if coefficients:
+        a.legend(handles=handles, loc='upper right', frameon=True, edgecolor='lightgrey')
+        a.set_ylim(bottom=1e-13, top=1e-7)
+        a.set_ylabel(r"$c_i\langle \rho(\theta)\rangle_{0.5'-50'}$")
+    else:
+        a.legend(handles=handles, loc='upper left', frameon=True, edgecolor='lightgrey')
+        a.set_ylim(bottom=1e-13, top=1e-5)
+        a.set_ylabel(r"$\langle \rho(\theta)\rangle_{0.5'-50'}$")
 
-    [a.axhline(10**x, color='lightgrey', alpha=0.5, zorder=1) for x in [-6, -8, -10, -12]]
-
-    a.set_ylim(bottom=1e-13, top=2e-5)
+    # [a.axhline(10**x, color='lightgrey', alpha=0.5, zorder=1) for x in [-6, -8, -10, -12]]
+    a.grid(which='major', axis='y', color='lightgrey', alpha=0.7, lw=0.5, zorder=1)
     a.set_xlim(-0.5, 35.5)
     plt.savefig('../figures/' + title + '.jpg', dpi=300)
     plt.show()
@@ -203,19 +292,19 @@ if __name__ == '__main__':
     # summary
 
     # y10 vs y1
-    # rhohomy10 = load_rho_samples(
-    #     args.datapath+'/rho-i-full-radec-03-piff-02-summary-cov1506.json',
-    #     n=1506
-    # )
+    rhohomy10 = load_rho_samples(
+        args.datapath+'/rho-i-full-radec-03-piff-02-summary-cov1506.json',
+        n=1506
+    )
 
-    # rhohomy1 = load_rho_samples(
-    #     args.datapath+'/rho-i-full-radec-03-piff-02-summary-50x150.json',
-    #     n=150
-    # )
+    rhohomy1 = load_rho_samples(
+        args.datapath+'/rho-i-full-radec-03-piff-02-summary-50x150.json',
+        n=150
+    )
 
     # significant = []
     # for k, v in rhohomy1.items():
-    #     pm_sig_y1 = v['xip'] - v['var_xip'], v['xip'] + v['xip_var']
+    #     pm_sig_y1 = v['xip'] - v['xip_var'], v['xip'] + v['xip_var']
     #     pm_sig_y10 = rhohomy10[k]['xip'] - rhohomy10[k]['xip_var'], rhohomy10[k]['xip'] + rhohomy10[k]['xip_var']
 
     #     if pm_sig_y1[0] > pm_sig_y10[1] or pm_sig_y1[1] < pm_sig_y10[0]:
@@ -225,18 +314,16 @@ if __name__ == '__main__':
     # y1toy10, y1toy10_sigma = fit_amplitude_scaling(rhohomy10, rhohomy1)
     # print("y1 to y10 scaling: ", y1toy10, "+/-", y1toy10_sigma)
 
-    # f, a = plt.subplots(1,1, figsize=(7.5, 3))
-    # plot_rho_summary(
-    #     rhohomy10,
-    #     rhohomy1,
-    #     a,
-    #     labels=['Y10 $i$', 'Y1 $i$'],
-    #     color_list=[colors.g, colors.p, colors.y],
-    #     title='rho-summary-i-full-radec-03-piff-02',
-    #     coefficients=False,
-    #     rhohompred=None,
-    #     # significant=significant,
-    # )
+    f, a = plt.subplots(1,1, figsize=(7.5, 3))
+    plot_rho_summary(
+        rhohomy10,
+        rhohomy1,
+        a,
+        labels=['Y10 $i$', 'Y1 $i$'],
+        color_list=[colors.g, colors.p, colors.y],
+        title='rho-summary-i-full-radec-03-piff-02',
+        coefficients=False,
+    )
 
     # # big vs small psfs
     # with open(args.datapath+'/rho-i-full-radec-03-piff-02-fwhmcutleq0.8-summary-cov567.json', 'rb') as f:
