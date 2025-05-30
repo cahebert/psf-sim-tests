@@ -139,8 +139,9 @@ def plot_rho_summary(
         [coeffy10, coeffy1],
         ['o', 'D']
     ):
+        a.grid(which='major', axis='y', color='lightgrey', alpha=0.7, lw=0.5, zorder=0)
         n_start = 0
-        params = {'color': c, 'alpha':transparancy, 'capsize': 1.5, 'capthick': 0.5, 'zorder':2}
+        params = {'color': c, 'alpha':transparancy, 'capsize': 1.5, 'capthick': 0.5, 'zorder':3}
 
         for alpha_factor, terms in zip(
             [0,1,2] if not coefficients else [0],
@@ -232,7 +233,6 @@ def plot_rho_summary(
         a.set_ylabel(r"$\langle \rho(\theta)\rangle_{0.5'-50'}$")
 
     # [a.axhline(10**x, color='lightgrey', alpha=0.5, zorder=1) for x in [-6, -8, -10, -12]]
-    a.grid(which='major', axis='y', color='lightgrey', alpha=0.7, lw=0.5, zorder=1)
     a.set_xlim(-0.5, 35.5)
     plt.savefig('../figures/' + title + '.jpg', dpi=300)
     plt.show()
@@ -323,6 +323,17 @@ if __name__ == '__main__':
         color_list=[colors.g, colors.p, colors.y],
         title='rho-summary-i-full-radec-03-piff-02',
         coefficients=False,
+    )
+
+    f, a = plt.subplots(1,1, figsize=(7.5, 3))
+    plot_rho_summary(
+        rhohomy10,
+        rhohomy1,
+        a,
+        labels=['Y10 $i$', 'Y1 $i$'],
+        color_list=[colors.g, colors.p, colors.y],
+        title='rho-c-summary-i-full-radec-03-piff-02',
+        coefficients=True,
     )
 
     # # big vs small psfs
