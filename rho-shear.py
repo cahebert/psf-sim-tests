@@ -66,32 +66,42 @@ def mean_rho(rho, lb=5, ub=100):
     result = np.mean(rho['xip'][points])
     return result
 
-def plot_rho_examples(rhohomy10, rhohomy1, a):
-    for rhohom, alpha in zip([rhohomy10, rhohomy1], [1, 0.25]):
-        for key, color, marker in zip(['dg2dg2', 'dg2de4', 'de4de4'], colors, markers):
-            plot_rho(a[0], rhohom[key], rho_labels[key], marker, {'color':color, 'alpha':alpha})
+def fit_amplitude_scaling(rhoy1, rhoy10):
+    from scipy import odr
+    y10_from_y1 = odr.Model(lambda p, x: p[0] * x)
 
-        for key, color, marker in zip(['g2w24', 'dg2w24', 'w22w24'], colors, markers):
-            plot_rho(a[1], rhohom[key], rho_labels[key], marker, {'color':color, 'alpha':alpha})
+    y1_stats = np.array([v['xip'] for k,v in rhoy1.items()])
+    y10_stats = np.array([v['xip'] for k,v in rhoy10.items()])
+    y1_errs = np.array([np.sqrt(v['xip_var']) for k,v in rhoy1.items()])
+    y10_errs = np.array([np.sqrt(v['xip_var']) for k,v in rhoy10.items()])
 
-        if alpha == 1:
-            [ax.legend(ncols=3, handletextpad=0.05, columnspacing=1, edgecolor='lightgrey', borderaxespad=0.2) for ax in a];
+    data = odr.RealData(x=abs(y10_stats), y=abs(y1_stats), sx=y10_errs, sy=y1_errs)
+    myodr = odr.ODR(data, y10_from_y1, beta0=[1.0])
+    myoutput = myodr.run()
+    return myoutput.beta[0], myoutput.sd_beta[0]
 
-    a[0].text(0.85, 0.8, 'Y10', alpha=1, transform=a[0].transAxes, fontsize=10, va='top')
-    a[0].text(0.85, 0.7, 'Y1', alpha=0.5, transform=a[0].transAxes, fontsize=10, va='top')
+def plot_rho_examples(rhohomy10, rhohomy1, a, color_list):
+    for ax, rhokey in zip(a, ['dg2dg2', 'g2dg2', 'g2w22']):
+        ax.grid(which='major', color='lightgrey', alpha=0.7, lw=0.5, zorder=0)
+        for rho, color, marker, label in zip(
+            [rhohomy10[rhokey], rhohomy1[rhokey]],
+            color_list,
+            markers,
+            ['Y10', 'Y1']
+        ):
+            plot_rho(ax, rho, label, marker, {'color':color, 'alpha':1, 'zorder':3})
+            ax.set_ylabel(rho_labels[rhokey]+r'$(\theta)$')
+    a[0].legend(ncols=2, handletextpad=0.05, columnspacing=1, edgecolor='lightgrey', borderaxespad=0.3)
 
     [ax.set_yscale('log', nonpositive='clip') for ax in a.flatten()]
 
     a[1].set_xscale('log')
     a[1].set_xlim(.6, 200)
-    a[1].set_xlabel(r'$\theta$ (arcmin)')# for ax in a]
-    [ax.set_ylabel(r'$\xi_+(\theta)$') for ax in a]
-    a[1].set_ylim(bottom=1e-10)
-    # [ax.tick_params(axis='both', which='both', direction='out') for ax in a]
-    # plt.subplots_adjust(top=0.92, bottom=0.85, right=0.925, left=0.08, hspace=0.001)
+    a[-1].set_xlabel(r'$\theta$ (arcmin)')
+    a[1].set_ylim(bottom=5e-11)
     plt.subplots_adjust(hspace=0)
     plt.savefig('../figures/rho-examples-hom-i-full-radec-03-piff-02-jk.jpg', dpi=300)
-    plt.show()
+    # plt.show()
 
 def plot_rho_summary(rhohomy10, rhohomy1, a):
     bad = ['nvisits']
