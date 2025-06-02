@@ -1,40 +1,11 @@
 import numpy as np
 import fitsio
 import pandas as pd
-
+import datahelper
 from colors import color_scheme as colors
 
 import matplotlib.pyplot as plt
 plt.style.use('./paper.mplstyle')
-
-def fetch_opsim_cols(
-    visits,
-    col_list=['paraAngle', 'altitude', 'rotSkyPos'],
-    db_path='/Users/clairealice/Documents/share/sim_baseline/baseline_v3.3_10yrs.db'):
-    """This is pretty redundant with above, but want list of visit-level information"""
-    import sqlite3
-    con = sqlite3.connect(db_path)
-
-    query = \
-        f"""SELECT observationId, {", ".join(c for c in col_list)}
-            FROM observations
-            WHERE observationId in ({", ".join([str(v) for v in visits])})
-            """
-
-    # Read these columns in from the "Summary" table, convert into a Pandas df
-    db = pd.read_sql_query(query, con)
-
-    return db
-
-def get_visit_info(cat, col_list=['paraAngle', 'altitude', 'rotSkyPos']):
-    visits = cat['visit'].unique()
-    db = fetch_opsim_cols(visits, col_list)
-
-    for col in col_list:
-        vals = np.zeros(len(cat))
-        for visitId in visits:
-            vals[np.where(cat['visit']==visitId)[0]] = db[col][db['observationId']==visitId]
-        cat[col] = vals
 
 def get_lsstsim_winds(cat):
     import psfws
@@ -63,7 +34,7 @@ def load_lsstsim(catpath):
     # can include the training stars here too bc it's not a model question.
     catalog = pd.DataFrame(catalog[~catalog['flagged']], dtype='f8')
 
-    get_visit_info(catalog, col_list=['azimuth', 'altitude'])
+    datahelper.get_visit_info(catalog, col_list=['azimuth', 'altitude'])
     winds = get_lsstsim_winds(catalog)
     winds = change_wind_coordinate(winds)
 
