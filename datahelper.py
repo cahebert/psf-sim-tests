@@ -29,3 +29,7 @@ def get_visit_info(cat, col_list=['paraAngle', 'altitude', 'rotSkyPos']):
         for visitId in np.unique(cat['visit']):
             vals[np.where(cat['visit']==visitId)[0]] = db[col][db['observationId']==visitId]
         cat[col] = vals
+
+    for col in col_list:
+        if col not in cat.columns:
+            raise ValueError(f"Column {col} not found in the database or catalog.")

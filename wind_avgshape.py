@@ -77,6 +77,9 @@ def load_desy3(catpath, windpath1, windpath2):
     ctio_wind = get_ctio_direction(ctio_wind)
     ctio_wind = change_wind_coordinate(ctio_wind['wind_dir'])
 
+    if ctio_wind['expnum'].iloc[0] not in catalog['exp']:
+        raise ValueError("DESY3 and CTIO wind catalogs do not match on expnum.")
+
     return catalog.rename(columns={'obs_e1':'e1','obs_e2':'e2'}), ctio_wind
 
 def load_psfws(catpath):
