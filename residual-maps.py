@@ -1,67 +1,100 @@
+import numpy as np
+import datahelper
+import plothelper
+from colors import color_scheme as colors
 import matplotlib.pyplot as plt
-# import numpy as np
-import fitsio
-import pandas as pd
-import skyproj
-import colorcet as cc
-plt.style.use('./paper.mplstyle')  # change this to a paper specific one
+plt.style.use('./paper.mplstyle')
 
-def load_catalog(catpath, residual):
-    catalog = fitsio.read(catpath)
-    catalog = catalog[~catalog['flagged']]
+def plot_seeing_examples(a, cat, savedir, residual=False):
+    subcat = cat[['visit','visit_T']]
+    grouped = subcat.groupby('visit').mean().sort_values('visit_T').reset_index()
+    lowseeing = grouped.at[40, 'visit']
+    highseeing = grouped.at[1450, 'visit']
 
-    cat = pd.DataFrame(catalog)
+    for ax, seeing in zip(a, [lowseeing, highseeing]):
+        plothelper.plot_whisker(
+            ax,
+            cat.loc[cat.index[cat['visit']==seeing]],
+            'dg' if residual else 'g',
+            LSSTCAM,
+            scaling=0.5,
+            keysize=0.01
+        )
+    a[0].set_ylabel('y (mm)', labelpad=-5)
+    a[1].set_ylabel('y (mm)', labelpad=-5)
+    a[1].set_xlabel('x (mm)')
 
-    if residual:
-        cat['dtt'] = (cat['T'] - cat['psf_T']) / cat['psf_T']
-        cat['dg1'] = (cat['g1'] - cat['psf_g1'])
-        cat['dg2'] = (cat['g2'] - cat['psf_g2'])
+    plt.subplots_adjust(left=0.15,right=0.95)
+    plt.savefig(savedir + 'focalplane-examples' + f'{"-residual" if residual else ""}' + '.jpg', dpi=300)
+    plt.show()
+    return a
 
-        cat['dtt4'] = (cat['T4'] - cat['psf_T4']) / cat['psf_T4']
-        cat['de4_1'] = (cat['e4_1'] - cat['psf_e4_1'])
-        cat['de4_2'] = (cat['e4_2'] - cat['psf_e4_2'])
+def plot_residual_fp(a, cat, savedir):
+    parameters = ['dtt', 'dtt4', 'dg', 'de4_']
+    labels = [
+        r'$\delta T^{(2)} / T^{(2)}$',
+        r'$\delta T^{(4)} / T^{(4)}$',
+        r'$\delta e^{(2)}$',
+        r'$\delta e^{(4)}$',
+    ]
+    vmaxs = [0.0025, 0.025, 0, 0]
 
-    return cat
+    for ax, param, label, vmax in zip(
+        a.flatten(),
+        parameters,
+        labels,
+        vmaxs,
+        ):
+        if 'g' in param or 'e' in param:
+            # whisker plot
+            plothelper.plot_whisker(
+                ax,
+                cat,
+                param,
+                LSSTCAM,
+                scaling=.01,
+                keysize=0.0002,
+                fontsize=5
+            )
+        else:
+            # size plot
+            cat['z'] = cat[param]
 
-def get_args():
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--residual', action='store_true', default=False)
-    return parser.parse_args()
+            plothelper.plot_fpbin_param(
+                ax,
+                cat,
+                LSSTCAM,
+                vmin=0 if 'T' in param else -vmax,
+                vmax=vmax,
+                numBins=151,
+                cbarlabel=label
+            )
 
-if __name__ == '__main__':
-    args = get_args()
+    for ax in a.flatten():
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
 
-    cat = load_catalog(
-        '~/Documents/shear/testing-piff/data/cat-i-full-radec-03-piff-02.fits',
-        args.residual)
+    # for ax in a[:,0]:
+    #     ax.set_ylabel('y (mm)', labelpad=-7)
+    # for ax in a[-1,:]:
+    #     ax.set_xlabel('x (mm)')
 
-    f, a = plt.subplots(3,2, figsize=(3.35,5.25))
+    plt.savefig(savedir + 'focalplane-residuals' + '.jpg', dpi=300)
+    plt.show()
 
-    if args.residual:
-        parameters = ['dtt', 'dtt4', 'dg1', 'dg2', 'de4_1', 'de4_2']
-        labels = [
-            r'$\delta T^{(2)} / T^{(2)}$',
-            r'$\delta T^{(4)} / T^{(4)}$',
-            r'$\delta g_1^{(2)}$',
-            r'$\delta g_2^{(2)}$',
-            r'$\delta e_1^{(4)}$',
-            r'$\delta e_2^{(4)}$',
-        ]
-        vmaxs = [.0025, .02, .0002, .0002, .0002, .0002]
-        ticks = [.002, .015, .00015, .00015, .00015, .00015]
-    else:
-        parameters = ['T', 'T4', 'g1', 'g2', 'e4_1', 'e4_2']
-        labels = [
-            r'$T^{(2)}$',
-            r'$T^{(4)}$',
-            r'$g_1^{(2)}$',
-            r'$g_2^{(2)}$',
-            r'$e_1^{(4)}$',
-            r'$e_2^{(4)}$',
-        ]
-        vmaxs = [None, None, 5e-3, 5e-3, 1.5e-3, 1.5e-3]
-        ticks = [None, None, 4e-3, 4e-3, 1e-3, 1e-3]
+def plot_residual_skycoord(a, cat, savedir):
+    import skyproj
+    parameters = ['dtt', 'dtt4', 'dg1', 'dg2', 'de4_1', 'de4_2']
+    labels = [
+        r'$\delta T^{(2)} / T^{(2)}$',
+        r'$\delta T^{(4)} / T^{(4)}$',
+        r'$\delta g_1^{(2)}$',
+        r'$\delta g_2^{(2)}$',
+        r'$\delta e_1^{(4)}$',
+        r'$\delta e_2^{(4)}$',
+    ]
+    vmaxs = [.002, .02, .00045, .00045, .00045, .00045]
+    ticks = [.0015, .015, .0004, .0004, .0004, .0004]
     for ax, param, label, vmax, tick in zip(
         a.flatten(),
         parameters,
@@ -74,7 +107,8 @@ if __name__ == '__main__':
             sp = skyproj.McBrydeSkyproj(ax=ax, n_grid_lat=3)
             sp.draw_hpxbin(
                 cat['ra'], cat['dec'], C=cat[param],
-                zoom=True, xsize=600, cmap='magma',
+                zoom=True, xsize=200, cmap=colors.cmap_s,
+                nside=256,
                 )
 
             cb = sp.draw_colorbar(
@@ -85,8 +119,9 @@ if __name__ == '__main__':
             sp = skyproj.McBrydeSkyproj(ax=ax, n_grid_lat=3)
             sp.draw_hpxbin(
                 cat['ra'], cat['dec'], C=cat[param],
-                zoom=True, xsize=600, cmap=cc.cm['CET_D1A'],
+                zoom=True, xsize=600, cmap=colors.cmap_d,
                 vmin=-vmax, vmax=vmax,
+                nside=256,
                 )
 
             cb = sp.draw_colorbar(
@@ -96,8 +131,10 @@ if __name__ == '__main__':
                 )
         sp.ax._ticklabels_visibility['top']=False
 
-        if 't' not in param and 'T' not in param:
-            cb.ax.ticklabel_format(style='sci', scilimits=(0,0), axis='both')
+        sp.draw_polygon([75, 65, 65, 75], [-35, -35, -45, -45], edgecolor='w', lw=1.)
+
+        # if 't' not in param and 'T' not in param:
+        cb.ax.ticklabel_format(style='sci', scilimits=(0,0), axis='both')
         if 'e4' not in param:
             sp.ax.set_xlabel('')
             sp.ax._ticklabels_visibility['bottom']=False
@@ -111,6 +148,34 @@ if __name__ == '__main__':
 
     # a[-1,1].axis('off')
 
-    plt.subplots_adjust(top=0.95, bottom=0.05, right=0.95, left=0.2, wspace=0.1, hspace=0.1)
-    plt.savefig(f'../figures/{"residual" if args.residual else "param"}-sky-maps.jpg', dpi=300)
+    plt.subplots_adjust(top=0.95, bottom=0.075, right=0.95, left=0.2, wspace=0.1, hspace=0.1)
+    plt.savefig(savedir + 'sky-maps-residual' + '.jpg', dpi=300)
     plt.show()
+
+
+if __name__ == '__main__':
+    savedir = '../figures/'
+
+    from lsst.obs.lsst import LsstCam
+    LSSTCAM = LsstCam.getCamera()
+
+    cat = datahelper.load_catalog(
+        '~/Documents/shear/testing-piff/data/cat-i-full-radec-03-piff-02.fits',
+        reserved=False,
+        fpcoords=True,
+        trim=False,
+    )
+
+    f, a = plt.subplots(2,1, figsize=(3.35, 5.8), sharex=True, sharey=True)
+    plot_seeing_examples(a, cat, savedir, residual=False)
+
+    f, a = plt.subplots(2,1, figsize=(3.35, 5.8), sharex=True, sharey=True)
+    plot_seeing_examples(a, cat, savedir, residual=True)
+
+    # now use only reserve stars
+    cat = cat[cat['reserved']]
+    f, a = plt.subplots(2,2, figsize=(3.35, 4.1), sharex=True, sharey=True)
+    plot_residual_fp(a, cat, savedir)
+
+    f, a = plt.subplots(3,2, figsize=(3.35,5.2))
+    plot_residual_skycoord(a, cat, savedir)
