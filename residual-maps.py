@@ -17,14 +17,15 @@ def plot_seeing_examples(a, cat, savedir, residual=False):
             cat.loc[cat.index[cat['visit']==seeing]],
             'dg' if residual else 'g',
             LSSTCAM,
-            scaling=0.5,
-            keysize=0.01
+            scaling=0.2 if residual else 0.5,
+            keysize=0.01,
+            fontsize=5,
+            keyposition=(220,240)
         )
-    a[0].set_ylabel('y (mm)', labelpad=-5)
-    a[1].set_ylabel('y (mm)', labelpad=-5)
-    a[1].set_xlabel('x (mm)')
+    [ax.set_yticklabels([]) for ax in a]
+    [ax.set_xticklabels([]) for ax in a]
 
-    plt.subplots_adjust(left=0.15,right=0.95)
+    plt.subplots_adjust(left=0.025, right=0.975, top=0.95, bottom=0.075)
     plt.savefig(savedir + 'focalplane-examples' + f'{"-residual" if residual else ""}' + '.jpg', dpi=300)
     plt.show()
     return a
@@ -37,47 +38,55 @@ def plot_residual_fp(a, cat, savedir):
         r'$\delta e^{(2)}$',
         r'$\delta e^{(4)}$',
     ]
-    vmaxs = [0.0025, 0.025, 0, 0]
+    vmaxs = [0.002, 0.022, 0, 0]
 
-    for ax, param, label, vmax in zip(
-        a.flatten(),
-        parameters,
+    for axkey, param, label, vmax, tick in zip(
+        ['t2', 't4', 'e2', 'e4'],
+    parameters,
         labels,
         vmaxs,
+        [.0015, .015, 0, 0]
         ):
         if 'g' in param or 'e' in param:
             # whisker plot
             plothelper.plot_whisker(
-                ax,
+                a[axkey],
                 cat,
                 param,
                 LSSTCAM,
                 scaling=.01,
-                keysize=0.0002,
-                fontsize=5
+                keysize=0.001,
+                fontsize=5,
+                keyposition=(225,245)
             )
         else:
             # size plot
             cat['z'] = cat[param]
 
             plothelper.plot_fpbin_param(
-                ax,
+                a[axkey],
                 cat,
                 LSSTCAM,
                 vmin=0 if 'T' in param else -vmax,
                 vmax=vmax,
+                axcbar=a['cbar'+axkey[-1]],
                 numBins=151,
-                cbarlabel=label
+                cbarlabel=label,
+                cbartick=tick,
             )
 
-    for ax in a.flatten():
-        ax.set_xticklabels([])
-        ax.set_yticklabels([])
+    a['e2'].text(
+        0.1, .875, r'$\delta e^{(2)}$',
+        horizontalalignment='center', verticalalignment='bottom',
+        transform=a['e2'].transAxes, fontsize=9
+    )
+    a['e4'].text(
+        0.1, 0.875, r'$\delta e^{(4)}$',
+        horizontalalignment='center', verticalalignment='bottom',
+        transform=a['e4'].transAxes, fontsize=9
+    )
 
-    # for ax in a[:,0]:
-    #     ax.set_ylabel('y (mm)', labelpad=-7)
-    # for ax in a[-1,:]:
-    #     ax.set_xlabel('x (mm)')
+    plt.subplots_adjust(left=0.025, right=0.975)
 
     plt.savefig(savedir + 'focalplane-residuals' + '.jpg', dpi=300)
     plt.show()
@@ -166,16 +175,43 @@ if __name__ == '__main__':
         trim=False,
     )
 
-    f, a = plt.subplots(2,1, figsize=(3.35, 5.8), sharex=True, sharey=True)
+    f, a = plt.subplots(
+        1,2, figsize=(3.35, 2),
+        sharex=True, sharey=True,
+        gridspec_kw={'wspace': 0.01}
+    )
     plot_seeing_examples(a, cat, savedir, residual=False)
 
-    f, a = plt.subplots(2,1, figsize=(3.35, 5.8), sharex=True, sharey=True)
+    f, a = plt.subplots(
+        1,2, figsize=(3.35, 2),
+        sharex=True, sharey=True,
+        gridspec_kw={'wspace': 0.02}
+    )
     plot_seeing_examples(a, cat, savedir, residual=True)
 
     # now use only reserve stars
     cat = cat[cat['reserved']]
-    f, a = plt.subplots(2,2, figsize=(3.35, 4.1), sharex=True, sharey=True)
+
+    # more complicated plot mosaic for this
+    mosaic = [
+        ['cbar2', 'cbar4'],
+        ['t2', 't4'],
+        ['e2', 'e4']
+    ]
+    f, a = plt.subplot_mosaic(
+        mosaic,
+        height_ratios=[0.05, 1, 1],
+        figsize=(3.35, 4.25),
+        gridspec_kw={'hspace': 0.01, 'wspace': 0.02}
+    )
+
+    [ax.set_yticks([]) for k, ax in a.items() if 'cbar' in k]
+    [ax.set_yticklabels([]) for k, ax in a.items() if 'cbar' not in k]
+    [ax.set_xticklabels([]) for k, ax in a.items() if 'cbar' not in k]
+    [ax.set_aspect('equal') for k, ax in a.items() if 'cbar' not in k]
+
     plot_residual_fp(a, cat, savedir)
 
-    f, a = plt.subplots(3,2, figsize=(3.35,5.2))
-    plot_residual_skycoord(a, cat, savedir)
+
+    # f, a = plt.subplots(3,2, figsize=(3.35,5.2))
+    # plot_residual_skycoord(a, cat, savedir)

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from colors import color_scheme as colors
 
-def plot_fpbin_param(ax, cat, camera, vmin, vmax, numBins=200, cbarlabel=''):
+def plot_fpbin_param(ax, cat, camera, vmin, vmax, axcbar=None, numBins=200, cbarlabel='', cbartick=None):
     from lsst.afw.cameraGeom import FOCAL_PLANE, PIXELS
 
     detectorIds = np.unique(cat["detector"])
@@ -44,23 +44,24 @@ def plot_fpbin_param(ax, cat, camera, vmin, vmax, numBins=200, cbarlabel=''):
         vmin=vmin,
         vmax=vmax
     )
-    plt.colorbar(sm, ax=ax, label=cbarlabel, location='top', pad=0.05)
+    if cbartick is None:
+        ticks = None
+    else:
+        ticks = [-cbartick, 0, cbartick]
+    if axcbar is not None:
+        plt.colorbar(sm, cax=axcbar, label=cbarlabel, location='top', pad=0.05, ticks=ticks)
+    else:
+        plt.colorbar(sm, ax=ax, label=cbarlabel, location='top', pad=0.05, ticks=ticks)
     ax.set_aspect("equal")
 
     return ax
 
-def plot_whisker(ax, cat, p, camera, scaling=1, keysize=.01, fontsize=8):
+def plot_whisker(ax, cat, p, camera, scaling=1, keysize=.01, fontsize=8, keyposition=None):
     from lsst.afw.cameraGeom import FOCAL_PLANE, PIXELS
 
     detectorIds = np.unique(cat["detector"])
     focalPlane_x = np.zeros(len(cat["x"]))
     focalPlane_y = np.zeros(len(cat["y"]))
-
-    ## PSF ellipticity
-    # e = np.hypot(cat[p+'1_pix'], cat[p+'2_pix'])
-    # beta = 0.5*np.arctan2(cat[p+'2_pix'], cat[p+'1_pix'])
-    # cat['dx'] = e*np.cos(beta)
-    # cat['dy'] = e*np.sin(beta)
 
     qdict = dict(alpha=1, angles='uv', pivot='middle', width=0.002,
                  headlength=0, headwidth=0, headaxislength=0, minlength=0)
@@ -90,16 +91,24 @@ def plot_whisker(ax, cat, p, camera, scaling=1, keysize=.01, fontsize=8):
         q = ax.quiver((xedge[1:]+xedge[:-1])/2, (yedge[1:]+yedge[:-1])/2,
                         dx, dy, scale=scaling, **qdict)
 
-    if keysize<.01:
-        if keysize * 1e3 >= 1:
-            keylabel = f'{keysize*1e3:.0f}'+r'$\times 10^{-3}$'
-        elif keysize * 1e4 >= 1:
-            keylabel = f'{keysize*1e4:.0f}'+r'$\times 10^{-4}$'
-        else:
-            keylabel = f'{keysize*1e5:.2f}'+r'$\times 10^{-5}$'
+    # if keysize<.01:
+    #     if keysize * 1e3 >= 1:
+    #         keylabel = f'{keysize*1e3:.0f}'+r'$\times 10^{-3}$'
+    #     elif keysize * 1e4 >= 1:
+    #         keylabel = f'{keysize*1e4:.0f}'+r'$\times 10^{-4}$'
+    #     else:
+    #         keylabel = f'{keysize*1e5:.2f}'+r'$\times 10^{-5}$'
+    # else:
+    keylabel = f'{keysize}'
+    if keyposition is None:
+        keyx, keyy = 240, 250
     else:
-        keylabel = f'{keysize}'
-    ax.quiverkey(q, 240, 250, keysize, r'$|e|$ = '+keylabel, coordinates='data', labelpos='N', fontproperties={'size':fontsize})
+        keyx, keyy = keyposition
+    ax.quiverkey(
+        q, keyx, keyy, keysize,
+        r'$|e|$ = '+keylabel,
+        coordinates='data', labelpos='N', labelsep=0.05,
+        fontproperties={'size':fontsize})
 
     ax.set_xlim(focalPlane_x.min(), focalPlane_x.max())
     ax.set_ylim(focalPlane_y.min(), focalPlane_y.max())
