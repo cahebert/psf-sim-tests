@@ -38,7 +38,7 @@ def load_lsstsim(catpath):
     winds = get_lsstsim_winds(catalog)
     winds = change_wind_coordinate(winds)
 
-    return catalog[['g1','g2']].rename(columns={'g1':'e1','g2':'e2'}), winds
+    return catalog[['g1','g2']], winds
 
 def get_ctio_direction(ctio_wind):
     import psfws
@@ -67,20 +67,21 @@ def load_desy3(catpath, windpath1, windpath2):
     fits = fitsio.FITS(catpath)
     catalog = fits[1][['obs_e1','obs_e2','exp']][:]
     catalog = pd.DataFrame(catalog, dtype='f8')
+    catalog['exp'] = catalog['exp'].astype('i8')
 
     # keep only the visits that are in both catalogs
     union_exp = np.intersect1d(catalog['exp'].unique(), ctio_wind['expnum'].unique())
     catalog = catalog[catalog['exp'].isin(union_exp)]
     ctio_wind = ctio_wind[ctio_wind['expnum'].isin(union_exp)]
 
+    if ctio_wind['expnum'].iloc[0] not in catalog['exp'].values:
+        raise ValueError("DESY3 and CTIO wind catalogs do not match on expnum.")
+
     # get the projected wind directions
     ctio_wind = get_ctio_direction(ctio_wind)
     ctio_wind = change_wind_coordinate(ctio_wind['wind_dir'])
 
-    if ctio_wind['expnum'].iloc[0] not in catalog['exp']:
-        raise ValueError("DESY3 and CTIO wind catalogs do not match on expnum.")
-
-    return catalog.rename(columns={'obs_e1':'e1','obs_e2':'e2'}), ctio_wind
+    return catalog.rename(columns={'obs_e1':'g1','obs_e2':'g2'}), ctio_wind
 
 def load_psfws(catpath):
     import json
@@ -89,7 +90,7 @@ def load_psfws(catpath):
     psfws_wind = psfwssim.pop('wind dir')
     psfws_wind = change_wind_coordinate(psfws_wind)
 
-    psfwssim = pd.DataFrame(psfwssim).rename(columns={'g1': 'e1', 'g2': 'e2'})
+    psfwssim = pd.DataFrame(psfwssim)#.rename(columns={'g1': 'g1', 'g2': 'g2'})
     return psfwssim, psfws_wind
 
 def change_wind_coordinate(wind_dirs):
@@ -97,9 +98,9 @@ def change_wind_coordinate(wind_dirs):
     # wind_dirs are in degrees E of N, so subtract 90 and flip sign
     return -(np.array(wind_dirs) % 180 - 90)
 
-def beta_angle(e1, e2):
-    """Calculate the beta angle from e1 and e2."""
-    return 0.5 * np.arctan2(e2, e1) * 180 / np.pi
+def beta_angle(g1, g2):
+    """Calculate the beta angle from g1 and g2."""
+    return 0.5 * np.arctan2(g2, g1) * 180 / np.pi
 
 
 # Load the catalogs and wind data
@@ -108,14 +109,17 @@ desy3_cat, ctio_wind = load_desy3(
     windpath1='/Users/clairealice/Downloads/ctio_sispi_wind_250000-275000.csv',
     windpath2='/Users/clairealice/Downloads/ctio_sispi_wind_350000-375000.csv',
 )
+print('des: ', desy3_cat.columns, flush=True)
 lsst_cat, lsst_wind = load_lsstsim(
     catpath='~/Documents/shear/testing-piff/data/cat-i-full-radec-03-piff-02.fits'
 )
+print('lsstsim: ', lsst_cat.columns, flush=True)
 psfws_cat, psfwssim_wind = load_psfws(
     catpath='/Users/clairealice/Downloads/2025_psfws_sim_summary.json'
 )
+print('psfws: ', psfws_cat.columns, flush=True)
 
-f, a = plt.subplots(3,1,figsize=(3.35, 5.5), sharex=True)
+f, a = plt.subplots(3,1,figsize=(3.35, 5), sharex=True)
 bins = np.linspace(-90,90,19) # degrees from +x axis
 
 labels = [
@@ -130,28 +134,29 @@ for ax, cat, wind, label in zip(
     [psfwssim_wind, lsst_wind, ctio_wind],
     labels,
     ):
+    print(label, flush=True)
     # calculate the mean angle for the beta angle
-    mean_angle = beta_angle(np.mean(cat['e1']), np.mean(cat['e2']))
+    mean_angle = beta_angle(np.mean(cat['g1']), np.mean(cat['g2']))
 
     ax.hist(
-        beta_angle(cat['e1'], cat['e2']),
-        bins=bins, alpha=0.1, color=colors.g,label=r'$\beta(e_1, e_2)$'
+        beta_angle(cat['g1'], cat['g2']),
+        bins=bins, alpha=0.1, color=colors.g,label=r'$\beta(g^{(2)}_1, g^{(2)}_2)$'
     )
     ax.ticklabel_format(axis='y', style='sci', scilimits=(-1,1))
     ax.axvline(
         mean_angle,
         lw=2.5, color=colors.g, ls='--', alpha=0.5,
-        label=r'$\beta(\langle e_1\rangle, \langle e_2\rangle)$'
+        label=r'$\beta(\langle g^{(2)}_1\rangle, \langle ^{(2)}_2\rangle)$'
     )
     aw = ax.twinx()
     aw.hist(wind, bins=bins, histtype='step', lw=2, color=colors.y, label=r'$\theta_{wind}$')
 
-    aw.set_ylabel(r'$N_{visit}$', color=colors.y)
-    ax.set_ylabel(r'$N_{PSF}$', color=colors.g)
+    aw.set_ylabel(r'$N_{visit}$')
+    ax.set_ylabel(r'$N_{PSF}$')
 
     ax.set_title(label, pad=0.15)
 
-a[0].set_xticks([-90, -60, -30, 0, 30, 60, 90], [-90, -60, -30, 0, 30, 60, 90]);
+a[0].set_xticks([-90, -60, -30, 0, 30, 60, 90], [-90, -60, -30, 0, 30, 60, 90])
 a[0].set_xlim(-90,90)
 
 a[2].set_xlabel('degrees from RA axis')

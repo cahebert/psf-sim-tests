@@ -6,42 +6,42 @@ plt.style.use('./paper.mplstyle')
 
 markers = ['o','D','s']
 
-rho_labels = {'g2g2'   : r'$\langle e_2 e_2 \rangle$',
-              'g2e4'   : r'$\langle e_2 e_4 \rangle$',
-              'e4e4'   : r'$\langle e_4 e_4 \rangle$',
-              'g2dg2'  : r'$\langle e_2 \delta e_2 \rangle$',
-              'g2de4'  : r'$\langle e_2 \delta e_4 \rangle$',
-              'e4dg2'  : r'$\langle e_4 \delta e_2 \rangle$',
-              'e4de4'  : r'$\langle e_4 \delta e_4 \rangle$',
-              'g2w22'  : r'$\langle e_2 w_{22} \rangle$',
-              'g2w24'  : r'$\langle e_2 w_{24} \rangle$',
-              'g2w42'  : r'$\langle e_2 w_{42} \rangle$',
-              'g2w44'  : r'$\langle e_2 w_{44} \rangle$',
-              'e4w22'  : r'$\langle e_4 w_{22} \rangle$',
-              'e4w24'  : r'$\langle e_4 w_{24} \rangle$',
-              'e4w42'  : r'$\langle e_4 w_{42} \rangle$',
-              'e4w44'  : r'$\langle e_4 w_{44} \rangle$',
-              'dg2dg2' : r'$\langle \delta e_2\delta e_2 \rangle$',
-              'dg2de4' : r'$\langle \delta e_2\delta e_4 \rangle$',
-              'de4de4' : r'$\langle \delta e_4\delta e_4 \rangle$',
-              'dg2w22' : r'$\langle \delta e_2 w_{22} \rangle$',
-              'dg2w24' : r'$\langle \delta e_2 w_{24} \rangle$',
-              'dg2w42' : r'$\langle \delta e_2 w_{42} \rangle$',
-              'dg2w44' : r'$\langle \delta e_2 w_{44} \rangle$',
-              'de4w22' : r'$\langle \delta e_4 w_{22} \rangle$',
-              'de4w24' : r'$\langle \delta e_4 w_{24} \rangle$',
-              'de4w42' : r'$\langle \delta e_4 w_{42} \rangle$',
-              'de4w44' : r'$\langle \delta e_4 w_{44} \rangle$',
-              'w22w22' : r'$\langle w_{22} w_{22} \rangle$',
-              'w22w24' : r'$\langle w_{22} w_{24} \rangle$',
-              'w22w42' : r'$\langle w_{22} w_{42} \rangle$',
-              'w22w44' : r'$\langle w_{22} w_{44} \rangle$',
-              'w24w24' : r'$\langle w_{24} w_{24} \rangle$',
-              'w24w42' : r'$\langle w_{24} w_{42} \rangle$',
-              'w24w44' : r'$\langle w_{24} w_{44} \rangle$',
-              'w42w42' : r'$\langle w_{42} w_{42} \rangle$',
-              'w42w44' : r'$\langle w_{42} w_{44} \rangle$',
-              'w44w44' : r'$\langle w_{44} w_{44} \rangle$',
+rho_labels = {'g2g2'   : r'$\langle g^{(2)} g^{(2)} \rangle$',
+              'g2e4'   : r'$\langle g^{(2)} e^{(4)} \rangle$',
+              'e4e4'   : r'$\langle e^{(4)} e^{(4)} \rangle$',
+              'g2dg2'  : r'$\langle g^{(2)} \delta g^{(2)} \rangle$',
+              'g2de4'  : r'$\langle g^{(2)} \delta e^{(4)} \rangle$',
+              'e4dg2'  : r'$\langle e^{(4)} \delta g^{(2)} \rangle$',
+              'e4de4'  : r'$\langle e^{(4)} \delta e^{(4)} \rangle$',
+              'g2w22'  : r'$\langle g^{(2)} w^{(22)} \rangle$',
+              'g2w24'  : r'$\langle g^{(2)} w^{(24)} \rangle$',
+              'g2w42'  : r'$\langle g^{(2)} w^{(42)} \rangle$',
+              'g2w44'  : r'$\langle g^{(2)} w^{(44)} \rangle$',
+              'e4w22'  : r'$\langle e^{(4)} w^{(22)} \rangle$',
+              'e4w24'  : r'$\langle e^{(4)} w^{(24)} \rangle$',
+              'e4w42'  : r'$\langle e^{(4)} w^{(42)} \rangle$',
+              'e4w44'  : r'$\langle e^{(4)} w^{(44)} \rangle$',
+              'dg2dg2' : r'$\langle \delta g^{(2)}\delta g^{(2)} \rangle$',
+              'dg2de4' : r'$\langle \delta g^{(2)}\delta e^{(4)} \rangle$',
+              'de4de4' : r'$\langle \delta e^{(4)}\delta e^{(4)} \rangle$',
+              'dg2w22' : r'$\langle \delta g^{(2)} w^{(22)} \rangle$',
+              'dg2w24' : r'$\langle \delta g^{(2)} w^{(24)} \rangle$',
+              'dg2w42' : r'$\langle \delta g^{(2)} w^{(42)} \rangle$',
+              'dg2w44' : r'$\langle \delta g^{(2)} w^{(44)} \rangle$',
+              'de4w22' : r'$\langle \delta e^{(4)} w^{(22)} \rangle$',
+              'de4w24' : r'$\langle \delta e^{(4)} w^{(24)} \rangle$',
+              'de4w42' : r'$\langle \delta e^{(4)} w^{(42)} \rangle$',
+              'de4w44' : r'$\langle \delta e^{(4)} w^{(44)} \rangle$',
+              'w22w22' : r'$\langle w^{(22)} w^{(22)} \rangle$',
+              'w22w24' : r'$\langle w^{(22)} w^{(24)} \rangle$',
+              'w22w42' : r'$\langle w^{(22)} w^{(42)} \rangle$',
+              'w22w44' : r'$\langle w^{(22)} w^{(44)} \rangle$',
+              'w24w24' : r'$\langle w^{(24)} w^{(24)} \rangle$',
+              'w24w42' : r'$\langle w^{(24)} w^{(42)} \rangle$',
+              'w24w44' : r'$\langle w^{(24)} w^{(44)} \rangle$',
+              'w42w42' : r'$\langle w^{(42)} w^{(42)} \rangle$',
+              'w42w44' : r'$\langle w^{(42)} w^{(44)} \rangle$',
+              'w44w44' : r'$\langle w^{(44)} w^{(44)} \rangle$',
                }
 
 def plot_rho(ax, rho, label, marker, params):
@@ -226,11 +226,11 @@ def plot_rho_summary(
     if coefficients:
         a.legend(handles=handles, loc='upper right', frameon=True, edgecolor='lightgrey')
         a.set_ylim(bottom=1e-13, top=1e-7)
-        a.set_ylabel(r"$c_i\langle \rho(\theta)\rangle_{0.5'-50'}$")
+        a.set_ylabel(r"$c_ic_j\langle P_iP_j\rangle_{0.5'-50'}$")
     else:
         a.legend(handles=handles, loc='upper left', frameon=True, edgecolor='lightgrey')
         a.set_ylim(bottom=1e-13, top=1e-5)
-        a.set_ylabel(r"$\langle \rho(\theta)\rangle_{0.5'-50'}$")
+        a.set_ylabel(r"$\langle P_iP_j\rangle_{0.5'-50'}$")
 
     # [a.axhline(10**x, color='lightgrey', alpha=0.5, zorder=1) for x in [-6, -8, -10, -12]]
     a.set_xlim(-0.5, 35.5)
