@@ -5,90 +5,78 @@ from colors import color_scheme as colors
 import matplotlib.pyplot as plt
 plt.style.use('./paper.mplstyle')
 
-def plot_seeing_examples(a, cat, savedir, residual=False):
-    subcat = cat[['visit','visit_T']]
-    grouped = subcat.groupby('visit').mean().sort_values('visit_T').reset_index()
-    lowseeing = grouped.at[40, 'visit']
-    highseeing = grouped.at[1450, 'visit']
-
-    for ax, seeing in zip(a, [lowseeing, highseeing]):
-        plothelper.plot_whisker(
-            ax,
-            cat.loc[cat.index[cat['visit']==seeing]],
-            'dg' if residual else 'g',
-            LSSTCAM,
-            scaling=0.2 if residual else 0.5,
-            keysize=0.01,
-            fontsize=5,
-            keyposition=(220,240)
-        )
-    [ax.set_yticklabels([]) for ax in a]
-    [ax.set_xticklabels([]) for ax in a]
-
-    plt.subplots_adjust(left=0.025, right=0.975, top=0.95, bottom=0.075)
-    plt.savefig(savedir + 'focalplane-examples' + f'{"-residual" if residual else ""}' + '.jpg', dpi=300)
-    plt.show()
-    return a
-
-def plot_residual_fp(a, cat, savedir):
-    parameters = ['dtt', 'dtt4', 'dg', 'de4_']
-    labels = [
-        r'$\delta T^{(2)} / T^{(2)}$',
-        r'$\delta T^{(4)} / T^{(4)}$',
-        r'$\delta e^{(2)}$',
-        r'$\delta e^{(4)}$',
-    ]
-    vmaxs = [0.002, 0.022, 0, 0]
+def plot_focalplane(
+    cat,
+    parameters,
+    labels,
+    vmaxs,
+    cbarticks,
+    whisker_properties,
+    savepath,
+    cat2=None
+    ):
+    a = make_mosaic_axes()
 
     for axkey, param, label, vmax, tick in zip(
-        ['t2', 't4', 'e2', 'e4'],
-    parameters,
+        ['t_l', 't_r', 'e_l', 'e_r'],
+        parameters,
         labels,
         vmaxs,
-        [.0015, .015, 0, 0]
+        cbarticks,
         ):
         if 'g' in param or 'e' in param:
+            if cat2 is not None and 'r' in axkey:
+                plotcat = cat2
+            else:
+                plotcat = cat
             # whisker plot
             plothelper.plot_whisker(
                 a[axkey],
-                cat,
+                plotcat,
                 param,
                 LSSTCAM,
-                scaling=.01,
-                keysize=0.001,
-                fontsize=5,
-                keyposition=(225,245)
+                **whisker_properties
             )
         else:
+            if cat2 is not None and 'r' in axkey:
+                plotcat = cat2
+            else:
+                plotcat = cat
+
             # size plot
-            cat['z'] = cat[param]
+            plotcat['z'] = plotcat[param]
+
+            if cat['reserved'].mean() == 1:
+                bins = 151
+            else:
+                bins = 61
 
             plothelper.plot_fpbin_param(
                 a[axkey],
-                cat,
+                plotcat,
                 LSSTCAM,
-                vmin=0 if 'T' in param else -vmax,
+                vmin=None if 'd' not in param else -vmax,
                 vmax=vmax,
-                axcbar=a['cbar'+axkey[-1]],
-                numBins=151,
+                axcbar=a['cbar_'+axkey[-1]],
+                numBins=bins,
                 cbarlabel=label,
                 cbartick=tick,
             )
 
-    a['e2'].text(
-        0.1, .875, r'$\delta e^{(2)}$',
+    a['e_l'].text(
+        0.1, 0.875, labels[2],
         horizontalalignment='center', verticalalignment='bottom',
-        transform=a['e2'].transAxes, fontsize=9
+        transform=a['e_l'].transAxes, fontsize=9
     )
-    a['e4'].text(
-        0.1, 0.875, r'$\delta e^{(4)}$',
+    a['e_r'].text(
+        0.1, 0.875, labels[3],
         horizontalalignment='center', verticalalignment='bottom',
-        transform=a['e4'].transAxes, fontsize=9
+        transform=a['e_r'].transAxes, fontsize=9
     )
 
-    plt.subplots_adjust(left=0.025, right=0.975)
+    plt.subplots_adjust(left=0.025, right=0.975, bottom=0.025, top=0.9)
 
-    plt.savefig(savedir + 'focalplane-residuals' + '.jpg', dpi=300)
+    plt.savefig(savepath, dpi=300)
     plt.show()
 
 def plot_residual_skycoord(a, cat, savedir):
@@ -155,12 +143,29 @@ def plot_residual_skycoord(a, cat, savedir):
         else:
             sp.ax.set_ylabel('Declination', fontsize=10)
 
-    # a[-1,1].axis('off')
-
     plt.subplots_adjust(top=0.95, bottom=0.075, right=0.95, left=0.2, wspace=0.1, hspace=0.1)
     plt.savefig(savedir + 'sky-maps-residual' + '.jpg', dpi=300)
     plt.show()
 
+def make_mosaic_axes():
+    mosaic = [
+        ['cbar_l', 'cbar_r'],
+        ['t_l', 't_r'],
+        ['e_l', 'e_r']
+    ]
+    f, a = plt.subplot_mosaic(
+        mosaic,
+        height_ratios=[0.03, 1, 1],
+        figsize=(3.35, 3.75),
+        gridspec_kw={'hspace': 0.02, 'wspace': 0.03}
+    )
+
+    [ax.set_yticks([]) for k, ax in a.items() if 'cbar' in k]
+    [ax.set_yticklabels([]) for k, ax in a.items() if 'cbar' not in k]
+    [ax.set_xticklabels([]) for k, ax in a.items() if 'cbar' not in k]
+    [ax.set_aspect('equal') for k, ax in a.items() if 'cbar' not in k]
+
+    return a
 
 if __name__ == '__main__':
     savedir = '../figures/'
@@ -175,43 +180,93 @@ if __name__ == '__main__':
         trim=False,
     )
 
-    f, a = plt.subplots(
-        1,2, figsize=(3.35, 2),
-        sharex=True, sharey=True,
-        gridspec_kw={'wspace': 0.01}
-    )
-    plot_seeing_examples(a, cat, savedir, residual=False)
+    # if printing statistics, format to close to tex table
+    means = cat[['dtt', 'dtt4', 'dg1', 'dg2', 'de4_1', 'de4_2', 'reserved']].groupby('reserved').mean()
+    stds = cat[['dtt', 'dtt4', 'dg1', 'dg2', 'de4_1', 'de4_2', 'reserved']].groupby('reserved').std()
+    for col in ['dtt', 'dtt4', 'dg1', 'dg2', 'de4_1', 'de4_2']:
+        print(f'& {means[col].iloc[0]:.2g} & {stds[col].iloc[0]:.2g} & {means[col].iloc[1]:.2g} & {stds[col].iloc[1]:.2g} \\ ')
 
-    f, a = plt.subplots(
-        1,2, figsize=(3.35, 2),
-        sharex=True, sharey=True,
-        gridspec_kw={'wspace': 0.02}
-    )
-    plot_seeing_examples(a, cat, savedir, residual=True)
+    subcat = cat[['visit','visit_T']]
+    grouped = subcat.groupby('visit').mean().sort_values('visit_T').reset_index()
+    lowseeing = grouped.at[40, 'visit']
+    highseeing = grouped.at[1450, 'visit']
 
-    # now use only reserve stars
-    cat = cat[cat['reserved']]
-
-    # more complicated plot mosaic for this
-    mosaic = [
-        ['cbar2', 'cbar4'],
-        ['t2', 't4'],
-        ['e2', 'e4']
+    # PSF focal plane map for example exposures
+    parameters = ['T', 'T', 'g', 'g']
+    labels = [
+        r'$T^{(2)}$ $($arcsec$^2)$',
+        r'$T^{(2)}$ $($arcsec$^2)$',
+        r'$g^{(2)}$',
+        r'$g^{(2)}$',
     ]
-    f, a = plt.subplot_mosaic(
-        mosaic,
-        height_ratios=[0.05, 1, 1],
-        figsize=(3.35, 4.25),
-        gridspec_kw={'hspace': 0.01, 'wspace': 0.02}
+    vmaxs = [None, None, 0, 0]
+    ticks = [None, None, 0, 0]
+    whisker_dict = {
+        'scaling': 0.4,
+        'keysize': 0.01,
+        'fontsize': 5,
+        'keyposition': (225, 250)
+    }
+    plot_focalplane(
+        cat=cat.loc[cat.index[cat['visit']==lowseeing]],
+        parameters=parameters,
+        labels=labels,
+        vmaxs=vmaxs,
+        cbarticks=ticks,
+        whisker_properties=whisker_dict,
+        savepath=savedir+'focalplane-example.jpg',
+        cat2=cat.loc[cat.index[cat['visit']==highseeing]],
     )
 
-    [ax.set_yticks([]) for k, ax in a.items() if 'cbar' in k]
-    [ax.set_yticklabels([]) for k, ax in a.items() if 'cbar' not in k]
-    [ax.set_xticklabels([]) for k, ax in a.items() if 'cbar' not in k]
-    [ax.set_aspect('equal') for k, ax in a.items() if 'cbar' not in k]
+    ## residual version of the above
+    parameters = ['dtt', 'dtt', 'dg', 'dg']
+    labels = [
+        r'$\delta T^{(2)} / T^{(2)}$',
+        r'$\delta T^{(2)} / T^{(2)}$',
+        r'$\delta g^{(2)}$',
+        r'$\delta g^{(2)}$',
+    ]
+    vmaxs = [0.025, 0.025, 0, 0]
+    whisker_dict['scaling'] = 0.09
+    whisker_dict['keysize'] = 0.002
+    plot_focalplane(
+        cat=cat.loc[cat.index[cat['visit']==lowseeing]],
+        parameters=parameters,
+        labels=labels,
+        vmaxs=vmaxs,
+        cbarticks=ticks,
+        whisker_properties=whisker_dict,
+        savepath=savedir+'focalplane-example-residual.jpg',
+        cat2=cat.loc[cat.index[cat['visit']==highseeing]],
+    )
+    # now use only reserve stars
+    cat = cat[cat['reserved']==1]
 
-    plot_residual_fp(a, cat, savedir)
+    ## focal plane map of all residuals
+    parameters = ['dtt', 'dtt4', 'dg', 'de4_']
+    labels = [
+        r'$\delta T^{(2)} / T^{(2)}$',
+        r'$\delta T^{(4)} / T^{(4)}$',
+        r'$\delta g^{(2)}$',
+        r'$\delta e^{(4)}$',
+    ]
+    vmaxs = [0.002, 0.022, 0, 0]
+    ticks = [0.0015, 0.015, 0, 0]
+    whisker_dict = {
+        'scaling': 0.01,
+        'keysize': 0.001,
+        'fontsize': 5,
+        'keyposition': (225, 250)
+    }
+    plot_focalplane(
+        cat=cat,
+        parameters=parameters,
+        labels=labels,
+        vmaxs=vmaxs,
+        cbarticks=ticks,
+        whisker_properties=whisker_dict,
+        savepath=savedir+'focalplane-residuals.jpg',
+    )
 
-
-    # f, a = plt.subplots(3,2, figsize=(3.35,5.2))
-    # plot_residual_skycoord(a, cat, savedir)
+    f, a = plt.subplots(3,2, figsize=(3.35,5.2))
+    plot_residual_skycoord(a, cat, savedir)

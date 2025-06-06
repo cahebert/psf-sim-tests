@@ -34,8 +34,12 @@ def plot_fpbin_param(ax, cat, camera, vmin, vmax, axcbar=None, numBins=200, cbar
 
     masked_statistic = np.ma.masked_where(statistic == 0, statistic)
 
-    cmap = colors.cmap_d
+    if (cat['z'] < 0).any():
+        cmap = colors.cmap_d
+    else:
+        cmap = colors.cmap_s
     cmap.set_bad(color='white')
+
     sm = ax.imshow(
         masked_statistic,
         extent=binExtent,
@@ -79,8 +83,12 @@ def plot_whisker(ax, cat, p, camera, scaling=1, keysize=.01, fontsize=8, keyposi
 
         bins = map.applyForward(np.vstack([np.linspace(0,4000,3),np.linspace(0,4000,3)]))
 
-        h1, xedge, yedge, bin_n = binned_statistic_2d(fp_x, fp_y, bins=bins, values=cat[p+'1_pix'][detectorInd])
-        h2, xedge, yedge, bin_n = binned_statistic_2d(fp_x, fp_y, bins=bins, values=cat[p+'2_pix'][detectorInd])
+        h1, xedge, yedge, bin_n = binned_statistic_2d(
+            fp_x, fp_y, bins=bins, values=cat[p+'1_pix'][detectorInd]
+        )
+        h2, xedge, yedge, bin_n = binned_statistic_2d(
+            fp_x, fp_y, bins=bins, values=cat[p+'2_pix'][detectorInd]
+        )
 
         e = np.hypot(h1, h2)
         beta = 0.5*np.arctan2(h2, h1)
