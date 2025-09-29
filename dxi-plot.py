@@ -6,104 +6,137 @@ from colors import color_scheme as colors
 plt.style.use('./paper.mplstyle')
 showsig = True
 
-f, a = plt.subplots(2, 1, figsize=(3.35, 3.75), sharex=True)
+def plot_dxi_band(ax, xip, theta, sig, label, params, c=1, alpha_fill=0.2):
+    line2dparams = {k:p for k,p in params.items() if 'cap' not in k}
+    ax.plot(theta, xip*c, **line2dparams, label=label)
+    ax.plot(theta, -xip*c, mfc='none', **line2dparams)
+
+    ax.fill_between(
+        theta, abs(xip*c) - sig * abs(c), abs(xip*c) + sig * abs(c),
+        alpha=alpha_fill, color=params['color'], zorder=2,
+    )
+    return ax
+
+f, a = plt.subplots(
+    2, 1, figsize=(3.35, 4.25),
+    sharex=True, sharey=True,
+    # gridspec_kw={'hspace':0.4},
+    )
 
 grey = '#dde3eb'
 
-with open(f'../data/dxi-i-full-radec-03-piff-02.json', 'r') as f:
-    data = json.load(f)
+# range_str='regular'
+frac = 0.35
+clist = [colors.g, colors.p, colors.p]
 
+type = 'all'
 for y10, ax in zip([False, True], a):
-    # if not y10:
-    for type, color, marker, label in zip(
-        ['all', 'no_w', 'alpha'],
-        [colors.g, colors.y, colors.p],
-        ['o','D', 's'],
-        [r'all terms', r'$\delta e^{(i)}\delta e^{(j)}$', r'$e^{(i)}x$']
-        ):
+    for fname, color, marker, label, alpha in zip(
+        ['empirical', 'alphae-2'], clist, ['o', 'v'], [r'$\alpha_i=0$', r'$\alpha_2=0.01, \alpha_4=-0.01$', 'test'], [0.2, 0.2]):
+        with open(f'../data/dxi-i-full-radec-04-piff-01-cornercut-{fname}.json', 'r') as f:
+            data = json.load(f)
+
         if y10:
             subset = data['y10'][type]
-            xip = np.array(subset['xip'])
+            xip = np.array(subset['xip']) * frac
             theta = np.array(subset['r'])
-            sig = np.sqrt(subset['xip_var'])
+            sig = np.sqrt(subset['xip_var']) * frac
         else:
             subset = data['y1'][type]
-            xip = np.mean(subset['xip'], axis=0)
+            xip = np.mean(subset['xip'], axis=0) * frac
             theta = np.array(subset['r'])
-            sig = np.sqrt(subset['xip_var'])
+            sig = np.sqrt(subset['xip_var']) * frac
 
-        # fourth order
-        ax.plot(theta, xip, '-', color=color, lw=1, zorder=4)
-        ax.plot(theta, -xip, ':', color=color, lw=1, zorder=4)
-        ax.errorbar(
-            theta[xip>0],
-            xip[xip>0],
-            yerr=sig[xip>0],
-            fmt=marker, color=color,
-            ms=3, zorder=4, capsize=1.5, capthick=0.5,
-            label=label
+        params = dict(
+            marker=marker,
+            color=color,
+            ms=4,
+            zorder=4,
+            lw=0,
+            mew=0.75,
         )
-        ax.errorbar(
-            theta[xip<0],
-            -xip[xip<0],
-            yerr=sig[xip<0],
-            fmt=marker, mfc='none', mew=0.75,
-            color=color, ms=3, zorder=4, capsize=1.5, capthick=0.5
-        )
+        plot_dxi_band(
+            ax, xip, theta, sig,
+            label=label, params=params,
+            alpha_fill=alpha)
 
     if showsig:
-        covfile = f'../data/thps_cov_test_matrix_{"Y10" if y10 else "Y1"}.dat'
+        covfile = f'../data/thps_cov_test_matrix_V2_{"Y10" if y10 else "Y1"}.dat'
         constraint = pd.read_csv(covfile, delimiter='\t', header=None).to_numpy()
         covmin = np.sqrt(np.diag(constraint)[:25])  # first half is xi+
-
-        for fraction, ls in zip([1, 0.3],['-', '--']):
+        theta_sig = np.copy(theta)
+        theta_sig[0] = 0.5
+        theta_sig[-1] = 50
+        for fraction, ls, lab in zip([1, 0.3],['-', '--'], [r'$\sigma_{\xi_+}$', r'$0.3\sigma_{\xi_+}$']):
             sigma = covmin * fraction
-            ax.plot(theta, sigma, ls=ls, lw=2, color=grey, zorder=2)
-            ax.fill_between(theta, 0, sigma, color=grey, alpha=0.2, zorder=1)
+            ax.plot(theta, sigma, ls=ls, lw=2, color=grey, zorder=2, label=lab)
+            ax.fill_between(theta_sig, 0, sigma, color=grey, alpha=0.15, zorder=1)
+        if not y10:
+            ylimu = covmin[0] * 2
+            ylimb = sigma[-1] / 100
 
-a[1].text(0.1, 0.85, f'Y10', fontsize=10, transform=a[1].transAxes)
-a[0].text(0.1, 0.125, f'Y1', fontsize=10, transform=a[0].transAxes)
+a[1].text(0.7125, 0.8, r'Y10 ($riz$)', fontsize=10, transform=a[1].transAxes)
+a[0].text(0.7125, 0.8, r'Y1 ($riz$)', fontsize=10, transform=a[0].transAxes)
 
-from matplotlib.lines import Line2D
-sig_labels = [r'$\sigma_{\xi_+}$', r'$0.3\sigma_{\xi_+}$']
-handles = [
-    Line2D([0], [0], color=grey, lw=2, ls=ls, label=lab)
-    for ls, lab in zip(['-', '--'], sig_labels)
-]
-a[0].legend(handles=handles, loc='upper right', borderaxespad=0.5)
-a[1].legend(loc='upper right', borderaxespad=0.5)
+h1, l1 = a[1].get_legend_handles_labels()
+legend_order = [2,3,0,1]
+a[1].legend(
+    handles=[h1[i] for i in legend_order],
+    labels=[l1[i] for i in legend_order],
+    loc='lower left', 
+    borderaxespad=0.1, ncol=2, handletextpad=0.2, columnspacing=1,
+    bbox_to_anchor=(0,1))
 
 a[1].set_xscale('log')
-a[1].set_xlabel(r'$\theta$ (arcmin)')
-a[1].set_xlim(.5, 200)
-
-# import pickle
-# with open('../data/xi-mcal-e460-edges-wldb-varsize-gauss.p', 'rb') as f:
-#     xi_calc = pickle.load(f)
-#     xi_calc = xi_calc[np.max(list(xi_calc.keys()))]
-
-# area_lsst = 19600  # square degrees
-# area_xi = 1.07  # square degrees
-# area_ratio = area_xi / area_lsst
-
-# # y1 data is 10x shallower, so multiply by sqrt(10)
-# adjustment_factor = area_ratio * 10
-
-# a[0].plot(
-#     xi_calc.meanr[xi_calc.meanr<2],
-#     np.sqrt(xi_calc.varxip * adjustment_factor)[xi_calc.meanr<2],
-#     ls='--',
-#     color=colors.p,
-#     lw=2,
-#     zorder=2,
-# )
+a[-1].set_xlabel(r'$\theta$ (arcmin)')
+a[1].set_xlim(np.min(theta)-.05, np.max(theta)+5)
 
 for ax in a:
     ax.set_yscale('log', nonpositive='clip')
     ax.set_ylabel(r'$\delta\xi_+^{\rm PSF}(\theta)$')
-    ax.set_ylim(bottom=4e-10, top=1e-5)
+    ax.set_ylim(bottom=ylimb, top=ylimu)
 
 plt.subplots_adjust(hspace=0)
 
-plt.savefig('../figures/dxi-i-full-radec-03-piff-02-2.jpg', dpi=300)
+plt.savefig(f'../figures/dxi-riz-full-radec-04-piff-01-cornercut-alpha!0.jpg', dpi=300)
 plt.show()
+
+# def bootstrap_ratio(data, type='all', nboot=50):
+#     ratios = []
+#     for i in range(nboot):
+#         idx = np.random.randint(0, 50, 50)
+#         ratio = abs(np.array(data['y10'][type]['xip']) / np.mean([data['y1'][type]['xip'][j] for j in idx], axis=0))
+#         ratios.append(ratio)
+#     return np.std(ratios, axis=0)
+
+# f2, ax = plt.subplots(1, 1, figsize=(3.35, 2), sharex=True)
+
+# for type, c, m, label in zip(
+#     ['all'],#, 'w_0', 'w_12'],
+#     [colors.g, colors.p, colors.y],
+#     ['o','D', 's'],
+#     [r'all terms', r'$\delta e^{(i)}\delta e^{(j)}$', r'remaining']):
+#     std = bootstrap_ratio(data, type='all', nboot=1000)
+#     ratio = abs(np.array(data['y10'][type]['xip']) / np.mean(data['y1'][type]['xip'], axis=0))
+#     # ax.errorbar(
+#     #     data['y10'][type]['r'], ratio, yerr=std,
+#     #     color=c, zorder=1, fmt='o')
+#     ax.plot(
+#         data['y10'][type]['r'], ratio, 'o',
+#         color=c, marker=m, lw=1, label=label)
+#     ax.fill_between(
+#         data['y10'][type]['r'], ratio-std, ratio+std,
+#         color=c, alpha=0.2)
+
+# ax.fill_between([.5, 50], 0.2, 0.05, color=colors.g, alpha=0.1)
+# # ax.set_yscale('log', nonpositive='clip')
+# ax.set_xscale('log')
+# ax.set_ylim(-0.5,2)
+# # ax.set_ylim(2e-1, 2e2)
+# ax.set_ylabel(r'$\delta\xi_+^{\rm Y10} / \delta\xi_+^{\rm Y1}$')
+# ax.set_xlabel(r'$\theta$ (arcmin)')
+# ax.set_xlim(.5, 50)
+# # ax.legend(loc='upper left', borderaxespad=0.5)
+
+# # plt.savefig(f'../figures/dxi-ratio-full-radec-04-piff-01-cornercut-emp-boot.jpg', dpi=300)
+# plt.show()

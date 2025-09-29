@@ -90,10 +90,10 @@ if __name__ == '__main__':
         a[1:],
         ['beta2', 'beta4', 'eta22', 'eta44', 'eta24', 'eta42'],
         range(7),
-        [r'$\delta c / \delta e^{(2)}$',
-         r'$\delta c / \delta e^{(4)}$',
-         r'$\delta c / w_{22}$', r'$\delta c / w_{44}$',
-         r'$\delta c / w_{24}$', r'$\delta c / w_{42}$']
+        [r'$\delta g / \delta e^{(2)}$',
+         r'$\delta g / \delta e^{(4)}$',
+         r'$\delta g / w_{22}$', r'$\delta g / w_{44}$',
+         r'$\delta g / w_{24}$', r'$\delta g / w_{42}$']
         # [r'$\beta_2$', r'$\beta_4$', r'$\eta_{22}$', r'$\eta_{44}$', r'$\eta_{24}$', r'$\eta_{42}$']
     ):
         y_r, y_c = responses[key+'_r'], responses[key+'_c']

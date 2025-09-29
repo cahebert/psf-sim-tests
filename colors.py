@@ -8,7 +8,8 @@ oranges = ['#642c00', '#692f00', '#6d3100', '#723400', '#763700', '#7a3900', '#7
 
 # custom cmap
 puor_custom = ListedColormap(purples + oranges[::-1])
-or_custom = ListedColormap(oranges[::-1])
+# or_custom = ListedColormap(oranges[::-1])
+pu_custom = ListedColormap(purples[::-1])
 
 def _color_scheme():
     ColorScheme = namedtuple(
@@ -18,7 +19,7 @@ def _color_scheme():
 
     colors = ColorScheme(
         puor_custom,
-        or_custom,
+        pu_custom,
         '#333333',
         '#A15FD3',
         '#F4AD15',
