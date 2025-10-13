@@ -19,7 +19,8 @@ def plot_tratio(ax, c1, c2, nbins=40):
         ['Y10', 'Y1']
     ):
         data = fitsio.read(f'/Users/clairealice/Documents/git/testing-piff-paper/data/summary-mcal-e{nepoch}-edges-wldb-varsize-gauss.fits')
-
+        if nepoch == 460:
+            l_data = len(data)
         # if nepoch == 46:
         # ax.hist(
         #     data['T_ratio'],
@@ -39,7 +40,8 @@ def plot_tratio(ax, c1, c2, nbins=40):
             lw=lw,
             # alpha=0.8,
             label=label,
-            zorder=-1
+            zorder=-1,
+            # weights=np.ones_like(data['T_ratio']) / l_data
             )
         h = np.histogram(
             data['T_ratio'],
@@ -67,8 +69,11 @@ if __name__ == '__main__':
         'lssty1':{'alpha2':0, 'alpha4':0},
         'lssty10':{'alpha2':0, 'alpha4':0},
         'lssty1_mcal':{'alpha2':0, 'alpha4':0},
-        'lssty10_mcal':{'alpha2':0, 'alpha4':0}
+        'lssty10_mcal':{'alpha2':0, 'alpha4':0},
+        'des_mcal':{}
     }
+
+    des_bins = json.load(open('../data/desy6_tratio_hist.json', 'r'))
 
     f, a = plt.subplots(
         7, 2,
@@ -85,6 +90,9 @@ if __name__ == '__main__':
     ax, hist = plot_tratio(a[0,0], colors.g, colors.y, nbins=40)
     # ahist.set_ylim(top=6250)
     # ax.set_yticks([])
+
+    # a[0,0].hist(hist[460][1][:-1], hist[460][1], color=colors.p, alpha=0.8, histtype='step',
+    #             weights=np.array(des_bins['hist_values']))
 
     for ax, key, imgkey, label in zip(
         a[1:],
@@ -112,6 +120,8 @@ if __name__ == '__main__':
             # coeff_c = scipy.integrate.trapezoid(y=interp_c(bins) * n,x=bins)
             coeffs['lssty1' if nepoch==46 else 'lssty10'][key] = coeff_r
             coeffs['lssty1_mcal' if nepoch==46 else 'lssty10_mcal'][key] = coeff_r_mcal
+        coeff_r_des = scipy.integrate.trapezoid(y=interp_r_mcal(bins) * des_bins['hist_values'], x=bins)
+        coeffs['des_mcal'][key] = coeff_r_des
 
         # ax[0].plot(
         #     interpx, interp_r(interpx),
