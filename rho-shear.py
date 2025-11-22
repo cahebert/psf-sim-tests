@@ -234,14 +234,14 @@ def plot_all_rho_c(rhoy10, rhoy1, a):
         coefficients = json.load(f)
     coeffy10 = coefficients['y10']
     coeffy1 = coefficients['y1']
-    parameters = ['e2','e4','de2','de4','w22','w24','w42','w44']
+    parameters = ['de2','de4','w22','w24','w42','w44'] #'e2','e4',
     maxs = []
     rs = []
     for pi in parameters:
         for pj in parameters:
             r = pi + pj
             if r in rhoy10.keys():
-                maxs.append(np.max(abs(coeffy10[r] * rhoy10[r]['xip'])))
+                maxs.append(np.max(np.mean(abs(coeffy1[r] * rhoy1[r]['xip'][rhoy1[r]['meanr']>5]))))
                 rs.append(r)
     sorted_ind = np.argsort(maxs)[::-1]
 
@@ -378,40 +378,40 @@ if __name__ == '__main__':
     )
 
     # full set
+    f, a = plt.subplots(
+        3,7, figsize=(7.5, 3.5),
+        sharex=True, sharey=True,
+        gridspec_kw={'hspace': 0, 'wspace': 0}
+        )
+    plot_all_rho_c(
+        rhohomy10,
+        rhohomy1,
+        a,
+    )
     # f, a = plt.subplots(
-    #     3,7, figsize=(7.5, 3.5),
+    #     6,6, figsize=(7.5, 5),
     #     sharex=True, sharey=True,
     #     gridspec_kw={'hspace': 0, 'wspace': 0}
     #     )
-    # plot_all_rho_c(
+    # plot_all_rho(
     #     rhohomy10,
     #     rhohomy1,
     #     a,
+    #     title='rho-all-i-full-radec-04-piff-01-cornercut'
     # )
-    f, a = plt.subplots(
-        6,6, figsize=(7.5, 5),
-        sharex=True, sharey=True,
-        gridspec_kw={'hspace': 0, 'wspace': 0}
-        )
-    plot_all_rho(
-        rhohomy10,
-        rhohomy1,
-        a,
-        title='rho-all-i-full-radec-04-piff-01-cornercut'
-    )
-    f, a = plt.subplots(
-        2,8, figsize=(7.5, 2.5),
-        sharex=True, sharey=True,
-        gridspec_kw={'hspace': 0, 'wspace': 0}
-        )
-    plot_all_rho(
-        rhohomy10,
-        rhohomy1,
-        a,
-        pj_list=['e4','e2'],
-        pi_list=['e2','e4','de2','de4','w22','w24','w42','w44'],
-        title='rho-ge-i-full-radec-04-piff-01-cornercut'
-    )
+    # f, a = plt.subplots(
+    #     2,8, figsize=(7.5, 2.5),
+    #     sharex=True, sharey=True,
+    #     gridspec_kw={'hspace': 0, 'wspace': 0}
+    #     )
+    # plot_all_rho(
+    #     rhohomy10,
+    #     rhohomy1,
+    #     a,
+    #     pj_list=['e4','e2'],
+    #     pi_list=['e2','e4','de2','de4','w22','w24','w42','w44'],
+    #     title='rho-ge-i-full-radec-04-piff-01-cornercut'
+    # )
 
     # # examples
     # f, a = plt.subplots(3,1, figsize=(3.35,4.5), sharex=True, sharey=True)

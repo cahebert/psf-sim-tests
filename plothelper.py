@@ -39,6 +39,9 @@ def plot_fpbin_param(ax, cat, camera, vmin, vmax, axcbar=None, numBins=10, cbarl
 
     return ax
 
+def get_bin_snr(vals):
+    return np.sqrt(np.sum(vals**2))
+
 def get_fullfp_bins(cat, camera, nBins, columns=[]):
     assert len(columns) > 0, "Must provide at least one column to bin by."
     detectorIds = cat["detector"].unique()
@@ -63,6 +66,7 @@ def get_fullfp_bins(cat, camera, nBins, columns=[]):
                 fp_x, fp_y,
                 values=cat['am_s2n'][detectorInd],
                 bins=[bins_x, bins_y],
+                statistic=get_bin_snr,
                 )
             result[col][detectorId]['stat'] = statistic.T
             result[col][detectorId]['s2n'] = s2n.T
